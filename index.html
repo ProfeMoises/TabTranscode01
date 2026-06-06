@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabTranscode - Transcriptor Musical</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #4CAF50;
+            --accent-hover: #45a049;
+            --border-color: #333;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Diapasón Canvas */
+        .fretboard-container {
+            width: 100%;
+            overflow-x: auto;
+            text-align: center;
+        }
+        canvas {
+            background-color: #2c2c2c;
+            border-radius: 4px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* Controles */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button, select {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-family: var(--font-main);
+        }
+
+        button:hover, select:hover {
+            background-color: var(--accent-hover);
+        }
+
+        select {
+            background-color: #333;
+            border: 1px solid #555;
+        }
+
+        /* Tablatura Output */
+        pre {
+            font-family: var(--font-mono);
+            background-color: #000;
+            padding: 15px;
+            border-radius: 4px;
+            color: #4CAF50;
+            overflow-x: auto;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        /* Transcripción Output */
+        .transcription-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .transcription-list li {
+            background-color: #2a2a2a;
+            margin-bottom: 5px;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--accent-color);
+            font-family: var(--font-mono);
+        }
+
+        .export-btn {
+            background-color: #2196F3;
+        }
+        .export-btn:hover {
+            background-color: #1976D2;
+        }
+        .danger-btn {
+            background-color: #f44336;
+        }
+        .danger-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        @media (max-width: 600px) {
+            button, select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>TABTRANSCODE</h1>
+    
+    <div class="panel">
+        <h2>1. Diapasón de Guitarra (Entrada)</h2>
+        <p style="font-size: 0.9rem; color: #aaa; margin-top: 0;">Haz clic en el mástil para añadir notas a la melodía.</p>
+        <div class="fretboard-container">
+            <canvas id="fretboard" width="850" height="160"></canvas>
+        </div>
+        <div class="controls">
+            <button class="danger-btn" onclick="borrarUltimaNota()">Deshacer Última Nota</button>
+            <button class="danger-btn" onclick="limpiarTodo()">Limpiar Todo</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>2. Tablatura Generada</h2>
+        <pre id="tab-output">
+e|--
+B|--
+G|--
+D|--
+A|--
+E|--</pre>
+    </div>
+
+    <div class="panel">
+        <h2>3. Transcripción</h2>
+        <div class="controls" style="justify-content: flex-start; margin-bottom: 15px;">
+            <select id="instrument-select" onchange="actualizarTranscripcion()">
+                <option value="charango">Charango</option>
+                <option value="ronroco">Ronroco</option>
+                <option value="ukelele">Ukelele Concierto</option>
+                <option value="quena">Quena</option>
+                <option value="piano">Piano</option>
+                <option value="bajo">Bajo</option>
+                <option value="armonica">Armónica</option>
+                <option value="flauta">Flauta Traversa</option>
+                <option value="concertina">Concertina</option>
+            </select>
+            <button class="export-btn" onclick="exportarTXT()">Exportar a TXT</button>
+        </div>
+        <ul id="transcription-output" class="transcription-list">
+            </ul>
+    </div>
+</div>
+
+<script>
+    // ========== ESTADO DE LA APLICACIÓN ==========
+    let melodia = []; // Almacenará objetos { cuerda, traste, midi, nombreOriginal }
+
+    // Nombres de cuerdas para la tablatura (E4 a E2)
+    const stringNames = ['e', 'B', 'G', 'D', 'A', 'E'];
+
+    // ========== CÓDIGO BASE PROPORCIONADO ==========
+    const tunings = {
+        guitar:   [40, 45, 50, 55, 59, 64], // E2, A2, D3, G3, B3, E4
+        charango: [67, 72, 64, 69, 76],
+        ronroco:  [55, 60, 64, 69, 74],
+        ukulele:  [67, 72, 76, 79], // Originalmente en findFingering busca 'ukulele'
+        ukelele:  [67, 72, 76, 79], // Duplicado para evitar errores de sintaxis en el llamado
+        bajo:     [28, 33, 38, 43]
+    };
+
+    function findFingering(noteMidi, tuning, maxFret = 12) {
+        let best = { string: -1, fret: 99, diff: Infinity };
+        for (let s = 0; s < tuning.length; s++) {
+            const openNote = tuning[s];
+            const fret = noteMidi - openNote;
+            if (fret >= 0 && fret <= maxFret) {
+                if (fret < best.fret || (fret === best.fret && s < best.string)) {
+                    best = { string: s, fret: fret };
+                }
+            }
+        }
+        if (best.string === -1) return null;
+        return { cuerda: best.string + 1, traste: best.fret };
+    }
+
+    function pianoMapping(noteMidi) {
+        const noteNames = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
+        const octave = Math.floor(noteMidi / 12) - 1;
+        const noteIndex = noteMidi % 12;
+        return `Piano: ${noteNames[noteIndex]}${octave}`;
+    }
+
+    function charangoMapping(noteMidi) {
+        const fing = findFingering(noteMidi, tunings.charango, 10);
+        if (!fing) return "Charango: nota fuera de rango";
+        return `Charango: cuerda ${fing.cuerda} (par), traste ${fing.traste}`;
+    }
+
+    function ronrocoMapping(noteMidi) {
+        const fing = findFingering(noteMidi, tunings.ronroco, 12);
+        if (!fing) return "Ronroco: nota fuera de rango";
+        return `Ronroco: cuerda ${fing.cuerda}, traste ${fing.traste}`;
+    }
+
+    function ukeleleMapping(noteMidi) {
+        const fing = findFingering(noteMidi, tunings.ukulele, 12);
+        if (!fing) return "Ukelele: nota fuera de rango";
+        return `Ukelele: cuerda ${fing.cuerda}, traste ${fing.traste}`;
+    }
+
+    function bajoMapping(noteMidi) {
+        const fing = findFingering(noteMidi, tunings.bajo, 12);
+        if (!fing) return "Bajo: nota fuera de rango";
+        return `Bajo: cuerda ${fing.cuerda}, traste ${fing.traste}`;
+    }
+
+    // Mapa común para vientos y concertina
+    const notasMapComun = {
+        "Do4":"C4","Do#4":"C#4","Re4":"D4","Re#4":"D#4","Mi4":"E4","Fa4":"F4","Fa#4":"F#4","Sol4":"G4","Sol#4":"G#4","La4":"A4","La#4":"A#4","Si4":"B4",
+        "Do5":"C5","Do#5":"C#5","Re5":"D5","Re#5":"D#5","Mi5":"E5","Fa5":"F5","Fa#5":"F#5","Sol5":"G5","Sol#5":"G#5","La5":"A5","La#5":"A#5","Si5":"B5"
+    };
+
+    // Quena
+    const quenaFingerings = {
+        "G4": "Tapados: 1,2,3", "A4": "Tapados: 1,2,3,4", "B4": "Tapados: 1,2,3,4,5",
+        "C5": "Tapados: 1,2,3,4,5,6", "D5": "Tapados: 1,2,3,4 (pulgar medio)", "E5": "Tapados: 1,2,3",
+        "F5": "Tapados: 1,2", "G5": "Tapados: 1", "A5": "Todos abiertos"
+    };
+    function quenaMapping(noteMidi) {
+        const note = pianoMapping(noteMidi).split(": ")[1];
+        const noteKey = notasMapComun[note] || note;
+        return quenaFingerings[noteKey] ? `Quena: ${quenaFingerings[noteKey]}` : `Quena: digitación no definida para ${note}`;
+    }
+
+    // Armónica
+    const harmonicaChart = {
+        1: { blow: 48, draw: 50 }, 2: { blow: 50, draw: 52 }, 3: { blow: 52, draw: 53 },
+        4: { blow: 53, draw: 55 }, 5: { blow: 55, draw: 57 }, 6: { blow: 57, draw: 59 },
+        7: { blow: 59, draw: 60 }, 8: { blow: 60, draw: 62 }, 9: { blow: 62, draw: 64 },
+        10: { blow: 64, draw: 65 }
+    };
+    function harmonicaMapping(noteMidi) {
+        for (let h=1; h<=10; h++) {
+            if (harmonicaChart[h].blow === noteMidi) return `Armónica: orificio ${h} soplo`;
+            if (harmonicaChart[h].draw === noteMidi) return `Armónica: orificio ${h} aspiración`;
+        }
+        return "Armónica: nota no disponible (requiere bending)";
+    }
+
+    // Flauta traversa
+    const fluteFingerings = {
+        "C4":"Todos tapados","D4":"Tapados 1,2,3,4","E4":"Tapados 1,2,3","F4":"Tapados 1,2",
+        "G4":"Tapados 1,2","A4":"Tapados 1","B4":"Tapados pulgar","C5":"Pulgar medio"
+    };
+    function fluteMapping(noteMidi) {
+        const note = pianoMapping(noteMidi).split(": ")[1];
+        const noteKey = notasMapComun[note] || note;
+        return fluteFingerings[noteKey] ? `Flauta: ${fluteFingerings[noteKey]}` : `Flauta: digitación no definida para ${note}`;
+    }
+
+    // Concertina
+    const concertinaMap = {
+        "C4":"Botón 1 izquierda","D4":"Botón 2 izquierda","E4":"Botón 3 izquierda","F4":"Botón 4 izquierda",
+        "G4":"Botón 5 izquierda","A4":"Botón 1 derecha","B4":"Botón 2 derecha","C5":"Botón 3 derecha"
+    };
+    function concertinaMapping(noteMidi) {
+        const note = pianoMapping(noteMidi).split(": ")[1];
+        const noteKey = notasMapComun[note] || note;
+        return concertinaMap[noteKey] ? `Concertina: ${concertinaMap[noteKey]}` : `Concertina: nota no mapeada para ${note}`;
+    }
+
+    // Función unificada
+    function transcribeNota(noteMidi, instrumento) {
+        switch(instrumento) {
+            case 'charango': return charangoMapping(noteMidi);
+            case 'ronroco': return ronrocoMapping(noteMidi);
+            case 'ukelele': return ukeleleMapping(noteMidi);
+            case 'piano': return pianoMapping(noteMidi);
+            case 'quena': return quenaMapping(noteMidi);
+            case 'armonica': return harmonicaMapping(noteMidi);
+            case 'flauta': return fluteMapping(noteMidi);
+            case 'concertina': return concertinaMapping(noteMidi);
+            case 'bajo': return bajoMapping(noteMidi);
+            default: return "Instrumento no soportado";
+        }
+    }
+
+    // ========== LÓGICA DEL DIAPASÓN (CANVAS) ==========
+    const canvas = document.getElementById('fretboard');
+    const ctx = canvas.getContext('2d');
+    const totalFrets = 13; // 0 (al aire) a 12
+    const totalStrings = 6;
+    
+    // Márgenes y espacios
+    const paddingX = 40;
+    const paddingY = 25;
+    const stringSpacing = (canvas.height - paddingY * 2) / (totalStrings - 1);
+    const fretWidth = (canvas.width - paddingX * 2) / totalFrets;
+
+    function dibujarDiapason() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Fondo del mástil (madera oscura)
+        ctx.fillStyle = "#3e2723";
+        ctx.fillRect(paddingX, paddingY - 10, canvas.width - paddingX * 2, canvas.height - paddingY * 2 + 20);
+
+        // Cejilla (Fret 0)
+        ctx.fillStyle = "#d7ccc8";
+        ctx.fillRect(paddingX - 10, paddingY - 10, 10, canvas.height - paddingY * 2 + 20);
+
+        // Trastes (líneas verticales)
+        ctx.strokeStyle = "#9e9e9e";
+        ctx.lineWidth = 3;
+        for (let i = 1; i <= totalFrets; i++) {
+            const x = paddingX + i * fretWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, paddingY - 10);
+            ctx.lineTo(x, canvas.height - paddingY + 10);
+            ctx.stroke();
+        }
+
+        // Marcas de trastes (inlays) en 3, 5, 7, 9, 12
+        ctx.fillStyle = "#ffffff";
+        const inlays = [3, 5, 7, 9, 12];
+        inlays.forEach(fret => {
+            const x = paddingX + (fret - 0.5) * fretWidth;
+            const y = canvas.height / 2;
+            if (fret === 12) {
+                // Doble punto en el 12
+                ctx.beginPath(); ctx.arc(x, y - 15, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x, y + 15, 4, 0, Math.PI * 2); ctx.fill();
+            } else {
+                ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+            }
+        });
+
+        // Cuerdas (líneas horizontales)
+        for (let i = 0; i < totalStrings; i++) {
+            const y = paddingY + i * stringSpacing;
+            // Cuerda más gruesa abajo (índice 5 que es E2 en nuestro render)
+            ctx.lineWidth = 1 + (i * 0.5);
+            ctx.strokeStyle = "#e0e0e0";
+            ctx.beginPath();
+            ctx.moveTo(paddingX - 10, y);
+            ctx.lineTo(canvas.width - paddingX + fretWidth, y);
+            ctx.stroke();
+
+            // Etiquetas de afinación (e, B, G, D, A, E)
+            ctx.fillStyle = "#4CAF50";
+            ctx.font = "14px Arial";
+            ctx.fillText(stringNames[i], 10, y + 5);
+        }
+
+        // Etiquetas de número de traste
+        ctx.fillStyle = "#aaa";
+        ctx.font = "12px Arial";
+        for (let i = 0; i <= totalFrets; i++) {
+            const x = paddingX + (i === 0 ? -15 : (i - 0.5) * fretWidth);
+            ctx.fillText(i.toString(), x, canvas.height - 2);
+        }
+    }
+
+    // Gestionar el Clic en el Canvas
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        // Ajuste de escala por si el canvas es redimensionado en CSS
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+        // Calcular traste
+        let fret = 0;
+        if (x > paddingX) {
+            fret = Math.ceil((x - paddingX) / fretWidth);
+        }
+        if (fret > totalFrets) return; // Fuera de rango
+
+        // Calcular cuerda (0 = e aguda, 5 = E grave en el gráfico)
+        let stringGraphicIndex = Math.round((y - paddingY) / stringSpacing);
+        if (stringGraphicIndex < 0 || stringGraphicIndex > 5) return;
+
+        // Mapeo: stringGraphicIndex 0 es E4 (índice 5 en tunings.guitar)
+        const logicalStringIndex = 5 - stringGraphicIndex; 
+        
+        const noteMidi = tunings.guitar[logicalStringIndex] + fret;
+        const nombreNota = pianoMapping(noteMidi).split(": ")[1];
+
+        // Añadir a melodía
+        melodia.push({
+            cuerdaGrafica: stringGraphicIndex, // para la tablatura
+            traste: fret,
+            midi: noteMidi,
+            nombreOriginal: nombreNota
+        });
+
+        actualizarTablatura();
+        actualizarTranscripcion();
+    });
+
+    // ========== LÓGICA DE LA INTERFAZ ==========
+
+    function actualizarTablatura() {
+        const tabOutput = document.getElementById('tab-output');
+        
+        // Inicializar líneas vacías
+        let lineas = [
+            `e|--`,
+            `B|--`,
+            `G|--`,
+            `D|--`,
+            `A|--`,
+            `E|--`
+        ];
+
+        // Rellenar con la melodía
+        melodia.forEach(nota => {
+            const trasteStr = nota.traste.toString();
+            const longitudBloque = trasteStr.length + 2; // Ej: "-3-" o "-12-"
+
+            for (let i = 0; i < 6; i++) {
+                if (i === nota.cuerdaGrafica) {
+                    lineas[i] += `${trasteStr}--`;
+                } else {
+                    lineas[i] += '-'.repeat(longitudBloque);
+                }
+            }
+        });
+
+        tabOutput.textContent = lineas.join('\n');
+    }
+
+    function actualizarTranscripcion() {
+        const list = document.getElementById('transcription-output');
+        const instrumento = document.getElementById('instrument-select').value;
+        list.innerHTML = '';
+
+        if (melodia.length === 0) {
+            list.innerHTML = '<li style="color: #aaa; border: none; background: transparent;">No hay notas introducidas.</li>';
+            return;
+        }
+
+        melodia.forEach((nota, index) => {
+            const li = document.createElement('li');
+            const transcripcion = transcribeNota(nota.midi, instrumento);
+            // Formato de presentación: [Nota Original] -> Transcripción
+            li.textContent = `${index + 1}. [Guitarra: ${nota.nombreOriginal}] ➔ ${transcripcion}`;
+            list.appendChild(li);
+        });
+        
+        // Hacer scroll automático al final
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function borrarUltimaNota() {
+        if (melodia.length > 0) {
+            melodia.pop();
+            actualizarTablatura();
+            actualizarTranscripcion();
+        }
+    }
+
+    function limpiarTodo() {
+        melodia = [];
+        actualizarTablatura();
+        actualizarTranscripcion();
+    }
+
+    function exportarTXT() {
+        if (melodia.length === 0) {
+            alert("No hay melodía para exportar.");
+            return;
+        }
+
+        const instrumento = document.getElementById('instrument-select').options[document.getElementById('instrument-select').selectedIndex].text;
+        
+        let contenido = "========================================\n";
+        contenido += " TABTRANSCODE - TRANSCRIPCIÓN MUSICAL\n";
+        contenido += "========================================\n\n";
+        
+        contenido += "MELODÍA ORIGINAL (Tablatura de Guitarra):\n";
+        contenido += "----------------------------------------\n";
+        contenido += document.getElementById('tab-output').textContent + "\n\n";
+
+        contenido += `TRANSCRIPCIÓN A: ${instrumento.toUpperCase()}\n`;
+        contenido += "----------------------------------------\n";
+        
+        melodia.forEach((nota, index) => {
+            const transcripcion = transcribeNota(nota.midi, document.getElementById('instrument-select').value);
+            contenido += `${index + 1}. [${nota.nombreOriginal}] -> ${transcripcion}\n`;
+        });
+
+        // Crear y descargar archivo
+        const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Transcripcion_${instrumento.replace(/\s+/g, '')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Inicialización al cargar la página
+    window.onload = () => {
+        dibujarDiapason();
+        actualizarTranscripcion();
+    };
+
+</script>
+</body>
+</html>
