@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TabTranscode - Transcriptor Musical Esquemático</title>
+    <title>TabTranscode v2 - Matriz Interactiva</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -29,7 +29,7 @@
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 950px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -39,6 +39,7 @@
             text-align: center;
             margin-bottom: 5px;
             color: var(--accent-color);
+            letter-spacing: 1px;
         }
 
         .panel {
@@ -54,28 +55,15 @@
             font-size: 1.2rem;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
+            color: #fff;
         }
 
-        /* Diapasón Canvas */
-        .fretboard-container {
-            width: 100%;
-            overflow-x: auto;
-            text-align: center;
-        }
-        canvas {
-            background-color: #2c2c2c;
-            border-radius: 4px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-
-        /* Controles */
         .controls {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
-            justify-content: center;
+            margin-bottom: 15px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         button, select {
@@ -99,7 +87,87 @@
             border: 1px solid #555;
         }
 
-        /* Bloques de código/esquemas */
+        /* Contenedores de Entrada Dinámica */
+        .input-interface {
+            display: none;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .input-interface.active {
+            display: flex;
+        }
+
+        canvas {
+            background-color: #2c2c2c;
+            border-radius: 4px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* Grillas de Botones para Viento/Botones */
+        .grid-pad {
+            display: grid;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .harmonica-grid {
+            grid-template-columns: repeat(10, 1fr);
+        }
+
+        .concertina-layout {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .concertina-hand {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            background: #252525;
+            padding: 15px;
+            border-radius: 6px;
+            width: 48%;
+        }
+
+        .concertina-btn {
+            background: #444;
+            border: 1px solid #666;
+            border-radius: 6px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sub-action {
+            font-size: 0.75rem;
+            padding: 4px 2px;
+            text-align: center;
+            border-radius: 3px;
+            cursor: pointer;
+            background: #555;
+        }
+        .sub-action:hover { background: var(--accent-color); }
+
+        .quena-grid {
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .pad-btn {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            padding: 12px;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .pad-btn:hover { background-color: #3a3a3a; border-color: var(--accent-color); }
+
+        /* Salidas */
         pre, .schematic-output {
             font-family: var(--font-mono);
             background-color: #000;
@@ -110,10 +178,9 @@
             font-size: 1.1rem;
             line-height: 1.4;
             margin: 0;
-            white-space: pre-wrap; /* Permite que secuencias largas bajen de línea */
+            white-space: pre-wrap;
         }
 
-        /* Para que las tablaturas no hagan wrap y mantengan formato */
         .tab-block {
             white-space: pre;
         }
@@ -122,43 +189,72 @@
         .export-btn:hover { background-color: #1976D2; }
         .danger-btn { background-color: #f44336; }
         .danger-btn:hover { background-color: #d32f2f; }
-
-        @media (max-width: 600px) {
-            button, select { width: 100%; }
+        
+        .note-tag {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>TABTRANSCODE</h1>
+    <h1>TABTRANSCODE V2</h1>
     
     <div class="panel">
-        <h2>1. Diapasón de Guitarra (Entrada)</h2>
-        <div class="fretboard-container">
-            <canvas id="fretboard" width="850" height="160"></canvas>
-        </div>
+        <h2>1. Instrumento de Entrada (Controlador)</h2>
         <div class="controls">
-            <button class="danger-btn" onclick="borrarUltimaNota()">Deshacer Última Nota</button>
+            <label for="input-select">Tocar desde: </label>
+            <select id="input-select" onchange="cambiarInstrumentoEntrada()">
+                <option value="guitar">Guitarra (6 Cuerdas)</option>
+                <option value="charango">Charango (5 Cuerdas)</option>
+                <option value="ronroco">Ronroco (5 Cuerdas)</option>
+                <option value="ukelele">Ukelele (4 Cuerdas)</option>
+                <option value="bajo">Bajo Eléctrico (4 Cuerdas)</option>
+                <option value="armonica">Armónica Diatónica</option>
+                <option value="concertina">Concertina Anglo 20</option>
+                <option value="quena">Quena Tradicional</option>
+            </select>
+            <button class="danger-btn" onclick="borrarUltimaNota()">Deshacer</button>
             <button class="danger-btn" onclick="limpiarTodo()">Limpiar Todo</button>
         </div>
+
+        <div id="interface-stringed" class="input-interface active">
+            <canvas id="fretboard" width="900" height="160"></canvas>
+        </div>
+
+        <div id="interface-armonica" class="input-interface">
+            <div id="harmonica-pad" class="grid-pad harmonica-grid"></div>
+        </div>
+
+        <div id="interface-concertina" class="input-interface">
+            <div id="concertina-pad" class="concertina-layout">
+                <div id="con-left" class="concertina-hand"></div>
+                <div id="con-right" class="concertina-hand"></div>
+            </div>
+        </div>
+
+        <div id="interface-quena" class="input-interface">
+            <div id="quena-pad" class="grid-pad quena-grid"></div>
+        </div>
+
+        <div style="margin-top:10px;">
+            <strong>Secuencia cargada:</strong>
+            <div id="live-sequence" style="margin-top:5px; min-height: 25px;"></div>
+        </div>
     </div>
 
     <div class="panel">
-        <h2>2. Melodía Original (Guitarra)</h2>
-        <pre id="tab-output" class="tab-block">
-e|--
-B|--
-G|--
-D|--
-A|--
-E|--</pre>
-    </div>
-
-    <div class="panel">
-        <h2>3. Transcripción Esquemática</h2>
-        <div class="controls" style="justify-content: flex-start; margin-bottom: 15px;">
-            <select id="instrument-select" onchange="actualizarTranscripcion()">
+        <h2>2. Traducción y Salida Esquemática</h2>
+        <div class="controls">
+            <label for="output-select">Traducir a: </label>
+            <select id="output-select" onchange="actualizarSalida()">
+                <option value="guitar">Guitarra (Tablatura)</option>
                 <option value="charango">Charango (Tablatura)</option>
                 <option value="ronroco">Ronroco (Tablatura)</option>
                 <option value="ukelele">Ukelele (Tablatura)</option>
@@ -167,352 +263,395 @@ E|--</pre>
                 <option value="concertina">Concertina Anglo 20 (Secuencia)</option>
                 <option value="quena">Quena (Esquema Visual)</option>
             </select>
-            <button class="export-btn" onclick="exportarTXT()">Exportar a TXT</button>
+            <button class="export-btn" onclick="exportarTXT()">Exportar Archivo Educativo (.TXT)</button>
         </div>
-        <div id="transcription-output" class="schematic-output">
-            </div>
+        
+        <pre id="transcription-output" class="schematic-output">[ Añade notas arriba para computar la traducción ]</pre>
     </div>
 </div>
 
 <script>
-    // ========== ESTADO DE LA APLICACIÓN ==========
-    let melodia = []; 
+    // ========== BASE DE DATOS Y CONFIGURACIONES ==========
+    let melodia = [];
 
-    // Afinaciones base (notas MIDI de las cuerdas al aire)
     const tunings = {
-        guitar:   [40, 45, 50, 55, 59, 64], // E2, A2, D3, G3, B3, E4
-        charango: [67, 72, 64, 69, 76],     // G4, C5, E4, A4, E5
-        ronroco:  [55, 60, 64, 69, 74],     // G3, C4, E4, A4, D5
-        ukelele:  [67, 72, 76, 79],         // G4, C5, E4, A4
-        bajo:     [28, 33, 38, 43]          // E1, A1, D2, G2
+        guitar:   { open: [40, 45, 50, 55, 59, 64], names: ['E', 'A', 'D', 'G', 'B', 'e'] },
+        charango: { open: [67, 72, 64, 69, 76],     names: ['G', 'C', 'E', 'A', 'E'] },
+        ronroco:  { open: [55, 60, 64, 69, 74],     names: ['G', 'C', 'E', 'A', 'D'] },
+        ukelele:  { open: [67, 72, 76, 79],         names: ['G', 'C', 'E', 'A'] },
+        bajo:     { open: [28, 33, 38, 43],         names: ['E', 'A', 'D', 'G'] }
     };
 
-    // Nombres de cuerdas para renderizar tablaturas de otros instrumentos (De aguda a grave en el dibujo)
-    const tabConfigs = {
-        charango: { strings: 5, tuning: tunings.charango, names: ['E','A','E','C','G'] },
-        ronroco:  { strings: 5, tuning: tunings.ronroco,  names: ['D','A','E','C','G'] },
-        ukelele:  { strings: 4, tuning: tunings.ukelele,  names: ['A','E','C','G'] },
-        bajo:     { strings: 4, tuning: tunings.bajo,     names: ['G','D','A','E'] }
-    };
-
-    // Función genérica para encontrar el traste óptimo
-    function findFingering(noteMidi, tuning, maxFret = 12) {
-        let best = { string: -1, fret: 99 };
-        for (let s = 0; s < tuning.length; s++) {
-            const openNote = tuning[s];
-            const fret = noteMidi - openNote;
-            if (fret >= 0 && fret <= maxFret) {
-                // Priorizar trastes más bajos
-                if (fret < best.fret || (fret === best.fret && s < best.string)) {
-                    best = { string: s, fret: fret };
-                }
-            }
-        }
-        if (best.string === -1) return null;
-        return { cuerda: best.string, traste: best.fret }; // 0-based index
-    }
-
-    // ========== MAPEOS ESQUEMÁTICOS ==========
-
-    // 1. ARMÓNICA (Secuencia Numérica)
     const harmonicaChart = {
-        1: { blow: 48, draw: 50 }, 2: { blow: 50, draw: 52 }, 3: { blow: 52, draw: 53 },
-        4: { blow: 53, draw: 55 }, 5: { blow: 55, draw: 57 }, 6: { blow: 57, draw: 59 },
-        7: { blow: 59, draw: 60 }, 8: { blow: 60, draw: 62 }, 9: { blow: 62, draw: 64 },
-        10:{ blow: 64, draw: 65 }
+        1: { blow: 48, draw: 50 }, 2: { blow: 52, draw: 55 }, 3: { blow: 55, draw: 59 },
+        4: { blow: 60, draw: 62 }, 5: { blow: 64, draw: 65 }, 6: { blow: 67, draw: 69 },
+        7: { blow: 72, draw: 71 }, 8: { blow: 76, draw: 74 }, 9: { blow: 79, draw: 77 },
+        10:{ blow: 84, draw: 81 }
     };
-    function generarEsquemaArmonica() {
-        let secuencia = [];
-        melodia.forEach(nota => {
-            let encontrada = false;
-            for (let h=1; h<=10; h++) {
-                if (harmonicaChart[h].blow === nota.midi) { secuencia.push(`${h}`); encontrada=true; break; }
-                if (harmonicaChart[h].draw === nota.midi) { secuencia.push(`(${h})`); encontrada=true; break; }
+
+    const concertinaChart = {
+        left: [
+            { label: "G-1/C-1", blow: 48, draw: 43 }, { label: "B-1/G-1", blow: 52, draw: 47 }, { label: "D/C", blow: 55, draw: 48 }, { label: "F/E", blow: 59, draw: 52 }, { label: "A/G", blow: 62, draw: 55 },
+            { label: "A-1/B-1", blow: 45, draw: 47 }, { label: "F#/D", blow: 54, draw: 50 }, { label: "A/G", blow: 57, draw: 55 }, { label: "C1/B", blow: 60, draw: 59 }, { label: "E1/D1", blow: 64, draw: 62 }
+        ],
+        right: [
+            { label: "B/C1", blow: 67, draw: 60 }, { label: "D1/E1", blow: 71, draw: 64 }, { label: "F1/G1", blow: 74, draw: 67 }, { label: "A1/C2", blow: 77, draw: 72 }, { label: "B1/E2", blow: 81, draw: 76 },
+            { label: "F#1/G1", blow: 66, draw: 67 }, { label: "A1/B1", blow: 69, draw: 71 }, { label: "C2/D2", blow: 72, draw: 74 }, { label: "E2/G2", blow: 76, draw: 79 }, { label: "F#2/B2", blow: 78, draw: 83 }
+        ]
+    };
+
+    const quenaChart = [
+        { note: "Do4",  midi: 60, holes: "[● | ●●●●●●]" },
+        { note: "Re4",  midi: 62, holes: "[● | ●●●●●○]" },
+        { note: "Mi4",  midi: 64, holes: "[● | ●●●●○○]" },
+        { note: "Fa4",  midi: 65, holes: "[● | ●●●◐○○]" },
+        { note: "Fa#4", midi: 66, holes: "[● | ●●●○○○]" },
+        { note: "Sol4", midi: 67, holes: "[● | ●●○○○○]" },
+        { note: "La4",  midi: 69, holes: "[● | ●○○○○○]" },
+        { note: "Si4",  midi: 71, holes: "[● | ○○○○○○]" },
+        { note: "Do5",  midi: 72, holes: "[○ | ●●●●●○]" },
+        { note: "Re5",  midi: 74, holes: "[○ | ●●●●○○]" },
+        { note: "Mi5",  midi: 76, holes: "[○ | ●●●○○○]" },
+        { note: "Fa5",  midi: 77, holes: "[○ | ●●◐○○○]" },
+        { note: "Sol5", midi: 79, holes: "[○ | ●○○○○○]" },
+        { note: "La5",  midi: 81, holes: "[○ | ○○○○○○]" }
+    ];
+
+    // ========== CONTROLADORES DE ENTRADA ==========
+    
+    function agregarNota(midiNum) {
+        const nombres = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
+        const octava = Math.floor(midiNum / 12) - 1;
+        const textoNota = `${nombres[midiNum % 12]}${octava}`;
+        
+        melodia.push({ midi: midiNum, tag: textoNota });
+        
+        renderizarSecuenciaEnVivo();
+        actualizarSalida();
+    }
+
+    function renderizarSecuenciaEnVivo() {
+        const container = document.getElementById('live-sequence');
+        if(melodia.length === 0) { container.innerHTML = "<em>Vacío</em>"; return; }
+        container.innerHTML = melodia.map(n => `<span class="note-tag">${n.tag}</span>`).join(" ");
+    }
+
+    function cambiarInstrumentoEntrada() {
+        const inst = document.getElementById('input-select').value;
+        
+        // Ocultar todas
+        document.querySelectorAll('.input-interface').forEach(el => el.classList.remove('active'));
+        
+        if (tunings[inst]) {
+            document.getElementById('interface-stringed').classList.add('active');
+            inicializarCanvas();
+        } else {
+            document.getElementById(`interface-${inst}`).classList.add('active');
+            if (inst === 'armonica') construirPadArmonica();
+            if (inst === 'concertina') construirPadConcertina();
+            if (inst === 'quena') construirPadQuena();
+        }
+    }
+
+    // CONSTRUIRE INTERFACES DE BOTONES
+    function construirPadArmonica() {
+        const pad = document.getElementById('harmonica-pad');
+        pad.innerHTML = "";
+        for (let h = 1; h <= 10; h++) {
+            let cell = document.createElement('div');
+            cell.className = "pad-btn";
+            cell.style.display = "flex";
+            cell.style.flexDirection = "column";
+            cell.innerHTML = `
+                <strong style="color:#fff; margin-bottom:5px;">${h}</strong>
+                <span class="sub-action" onclick="agregarNota(${harmonicaChart[h].blow})">Sop (${harmonicaChart[h].blow})</span>
+                <span class="sub-action" style="background:#334455;" onclick="agregarNota(${harmonicaChart[h].draw})">Asp (${harmonicaChart[h].draw})</span>
+            `;
+            pad.appendChild(cell);
+        }
+    }
+
+    function construirPadConcertina() {
+        const buildHand = (side, targetId) => {
+            const container = document.getElementById(targetId);
+            container.innerHTML = "";
+            concertinaChart[side].forEach(btn => {
+                let div = document.createElement('div');
+                div.className = "concertina-btn";
+                div.innerHTML = `
+                    <span style="font-size:0.8rem; text-align:center; font-weight:bold;">${btn.label}</span>
+                    <span class="sub-action" onclick="agregarNota(${btn.blow})">Cerrar</span>
+                    <span class="sub-action" style="background:#553355;" onclick="agregarNota(${btn.draw})">Abrir</span>
+                `;
+                container.appendChild(div);
+            });
+        };
+        buildHand('left', 'con-left');
+        buildHand('right', 'con-right');
+    }
+
+    function construirPadQuena() {
+        const pad = document.getElementById('quena-pad');
+        pad.innerHTML = "";
+        quenaChart.forEach(q => {
+            let btn = document.createElement('div');
+            btn.className = "pad-btn";
+            btn.style.cursor = "pointer";
+            btn.innerHTML = `<strong style="color:var(--accent-color);">${q.note}</strong><br><span style="font-size:0.75rem; font-family:monospace;">${q.holes}</span>`;
+            btn.onclick = () => agregarNota(q.midi);
+            pad.appendChild(btn);
+        });
+    }
+
+    // ========== MOTOR DE RENDERIZADO DE SALIDA ==========
+
+    function encontrarDigitacionCuerda(midi, tuningArray) {
+        let mejor = null;
+        for (let c = 0; c < tuningArray.length; c++) {
+            let traste = midi - tuningArray[c];
+            if (traste >= 0 && traste <= 15) {
+                if (!mejor || traste < mejor.traste) {
+                    mejor = { cuerda: c, traste: traste };
+                }
             }
-            if(!encontrada) secuencia.push("[?]"); // Requiere bending o overblow
-        });
-        return secuencia.join("  -  ");
+        }
+        return mejor;
     }
 
-    // 2. CONCERTINA ANGLO 20 (C/G Layout)
-    // Formato: [Mano-Fila-Botón Acción] -> ej. [Izq-Arriba-3 Cerrar]
-    const concertinaMap = {
-        // Mano Izquierda - Fila Arriba (G)
-        48: "[Izq-Sup-1 Abrir]", 55: "[Izq-Sup-1 Cerrar]", // C3 / G3
-        59: "[Izq-Sup-2 Cerrar]", 55: "[Izq-Sup-2 Abrir]", // B3 / G3 (Ajustado según mapa común)
-        62: "[Izq-Sup-3 Cerrar]", 60: "[Izq-Sup-3 Abrir]", // D4 / C4
-        65: "[Izq-Sup-4 Cerrar]", 64: "[Izq-Sup-4 Abrir]", // F4 / E4
-        69: "[Izq-Sup-5 Cerrar]", 67: "[Izq-Sup-5 Abrir]", // A4 / G4
-        // Mano Izquierda - Fila Abajo (C)
-        57: "[Izq-Inf-1 Cerrar]", 59: "[Izq-Inf-1 Abrir]", // A3 / B3
-        66: "[Izq-Inf-2 Cerrar]", 62: "[Izq-Inf-2 Abrir]", // F#4 / D4
-        69: "[Izq-Inf-3 Cerrar]", 67: "[Izq-Inf-3 Abrir]", // A4 / G4
-        72: "[Izq-Inf-4 Cerrar]", 71: "[Izq-Inf-4 Abrir]", // C5 / B4
-        76: "[Izq-Inf-5 Cerrar]", 74: "[Izq-Inf-5 Abrir]", // E5 / D5
-        // Mano Derecha - Fila Arriba (G)
-        71: "[Der-Sup-1 Cerrar]", 72: "[Der-Sup-1 Abrir]", // B4 / C5
-        74: "[Der-Sup-2 Cerrar]", 76: "[Der-Sup-2 Abrir]", // D5 / E5
-        77: "[Der-Sup-3 Cerrar]", 79: "[Der-Sup-3 Abrir]", // F5 / G5
-        81: "[Der-Sup-4 Cerrar]", 84: "[Der-Sup-4 Abrir]", // A5 / C6
-        83: "[Der-Sup-5 Cerrar]", 88: "[Der-Sup-5 Abrir]", // B5 / E6
-        // Mano Derecha - Fila Abajo (C)
-        78: "[Der-Inf-1 Cerrar]", 79: "[Der-Inf-1 Abrir]", // F#5 / G5
-        81: "[Der-Inf-2 Cerrar]", 83: "[Der-Inf-2 Abrir]", // A5 / B5
-        84: "[Der-Inf-3 Cerrar]", 86: "[Der-Inf-3 Abrir]", // C6 / D6
-        88: "[Der-Inf-4 Cerrar]", 91: "[Der-Inf-4 Abrir]", // E6 / G6
-        90: "[Der-Inf-5 Cerrar]", 95: "[Der-Inf-5 Abrir]"  // F#6 / B6
-    };
-    function generarEsquemaConcertina() {
-        let secuencia = melodia.map(nota => {
-            return concertinaMap[nota.midi] || `[Nota ${nota.nombreOriginal} fuera de rango]`;
-        });
-        return secuencia.join("  ➔  ");
-    }
-
-    // 3. QUENA (Esquema Visual de Agujeros)
-    // Leyenda: [Pulgar | 1 2 3 4 5 6] -> ● Tapado, ○ Destapado, ◐ Medio
-    const quenaMap = {
-        60: "Do4  [● | ●●●●●●]",
-        62: "Re4  [● | ●●●●●○]",
-        64: "Mi4  [● | ●●●●○○]",
-        65: "Fa4  [● | ●●●◐○○]", // Posición cruzada/medio agujero
-        66: "Fa#4 [● | ●●●○○○]",
-        67: "Sol4 [● | ●●○○○○]",
-        69: "La4  [● | ●○○○○○]",
-        71: "Si4  [● | ○○○○○○]",
-        72: "Do5  [○ | ●●●●●○]", // 2da Octava
-        74: "Re5  [○ | ●●●●○○]",
-        76: "Mi5  [○ | ●●●○○○]",
-        77: "Fa5  [○ | ●●◐○○○]",
-        79: "Sol5 [○ | ●○○○○○]",
-        81: "La5  [○ | ○○○○○○]"
-    };
-    function generarEsquemaQuena() {
-        let secuencia = melodia.map(nota => {
-            return quenaMap[nota.midi] || `${nota.nombreOriginal} [Fuera de rango]`;
-        });
-        // Para la quena, devolvemos una lista vertical para que el esquema se vea claro
-        return secuencia.join("\n");
-    }
-
-    // ========== GENERADORES DE TABLATURA ==========
-
-    function generarTablaturaEsquematica(instrumento) {
-        const config = tabConfigs[instrumento];
-        if (!config) return "Esquema no disponible.";
-
-        // Inicializar líneas (ej. de aguda a grave visualmente)
+    function generarTablaturaTexto(instKey) {
+        const conf = tunings[instKey];
+        let numCuerdas = conf.open.length;
         let lineas = [];
-        for (let i = 0; i < config.strings; i++) {
-            lineas.push(`${config.names[i]}|--`);
+        
+        // Las cuerdas agudas se grafican arriba
+        for(let i = numCuerdas - 1; i >= 0; i--) {
+            lineas.push(`${conf.names[i]}|--`);
         }
 
         melodia.forEach(nota => {
-            const fingering = findFingering(nota.midi, config.tuning, 14);
-            const trasteStr = fingering ? fingering.traste.toString() : 'X';
-            const longitudBloque = Math.max(trasteStr.length + 2, 4); 
+            let dig = encontrarDigitacionCuerda(nota.midi, conf.open);
+            let trasteStr = dig ? dig.traste.toString() : "X";
+            let delta = Math.max(trasteStr.length + 2, 4);
 
-            for (let i = 0; i < config.strings; i++) {
-                // Mapear índice lógico al índice visual (invertimos para que la aguda quede arriba)
-                const indiceVisual = (config.strings - 1) - i;
-
-                if (fingering && i === fingering.cuerda) {
-                    lineas[indiceVisual] += `${trasteStr}`.padEnd(longitudBloque - 2, '-') + `--`;
+            for(let i = 0; i < numCuerdas; i++) {
+                let idxVisual = (numCras = (numCuerdas - 1) - i);
+                if (dig && i === dig.cuerda) {
+                    lineas[idxVisual] += `${trasteStr}`.padEnd(delta - 2, '-') + `--`;
                 } else {
-                    lineas[indiceVisual] += '-'.repeat(longitudBloque);
+                    lineas[idxVisual] += '-'.repeat(delta);
                 }
             }
         });
-
         return lineas.join('\n');
     }
 
-    // Utilidad extra para obtener el nombre de la nota para logs/UI
-    function getNoteName(noteMidi) {
-        const noteNames = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
-        const octave = Math.floor(noteMidi / 12) - 1;
-        const noteIndex = noteMidi % 12;
-        return `${noteNames[noteIndex]}${octave}`;
+    function actualizarSalida() {
+        const out = document.getElementById('transcription-output');
+        const instOut = document.getElementById('output-select').value;
+
+        if(melodia.length === 0) {
+            out.textContent = "[ Añade notas arriba para computar la traducción ]";
+            return;
+        }
+
+        if(tunings[instOut]) {
+            out.textContent = generarTablaturaTexto(instOut);
+        } else if (instOut === 'armonica') {
+            let res = [];
+            melodia.forEach(n => {
+                let f = false;
+                for(let h=1; h<=10; h++){
+                    if(harmonicaChart[h].blow === n.midi) { res.push(`${h}`); f=true; break; }
+                    if(harmonicaChart[h].draw === n.midi) { res.push(`(${h})`); f=true; break; }
+                }
+                if(!f) res.push(`[?]`);
+            });
+            out.textContent = res.join("  ");
+        } else if (instOut === 'concertina') {
+            let res = [];
+            melodia.forEach(n => {
+                let f = false;
+                ['left','right'].forEach(side => {
+                    concertinaChart[side].forEach(b => {
+                        if(!f && b.blow === n.midi) { res.push(`[${b.label} C]`); f=true; }
+                        if(!f && b.draw === n.midi) { res.push(`[${b.label} A]`); f=true; }
+                    });
+                });
+                if(!f) res.push(`[X]`);
+            });
+            out.textContent = res.join(" ➔ ");
+        } else if (instOut === 'quena') {
+            let res = [];
+            melodia.forEach(n => {
+                let q = quenaChart.find(x => x.midi === n.midi);
+                res.push(q ? `${q.note.padEnd(5)} ${q.holes}` : `${n.tag.padEnd(5)} [Fuera Rango]`);
+            });
+            out.textContent = res.join('\n');
+        }
     }
 
-    // ========== LÓGICA DEL DIAPASÓN (CANVAS) ==========
+    // ========== CANVAS DINÁMICO PARA DIAPASÓN ==========
     const canvas = document.getElementById('fretboard');
     const ctx = canvas.getContext('2d');
-    const totalFrets = 12; 
-    const totalStrings = 6;
-    const stringNames = ['e', 'B', 'G', 'D', 'A', 'E'];
-    
-    const paddingX = 40;
-    const paddingY = 25;
-    const stringSpacing = (canvas.height - paddingY * 2) / (totalStrings - 1);
-    const fretWidth = (canvas.width - paddingX * 2) / totalFrets;
 
-    function dibujarDiapason() {
+    function inicializarCanvas() {
+        const inst = document.getElementById('input-select').value;
+        const conf = tunings[inst];
+        if(!conf) return;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        let numStrings = conf.open.length;
+        let paddingX = 40;
+        let paddingY = 20;
+        let stringSpacing = (canvas.height - paddingY * 2) / (numStrings - 1 || 1);
+        let fretWidth = (canvas.width - paddingX * 2) / 12;
+
+        // Madera
         ctx.fillStyle = "#3e2723";
         ctx.fillRect(paddingX, paddingY - 10, canvas.width - paddingX * 2, canvas.height - paddingY * 2 + 20);
-
+        // Cejuela
         ctx.fillStyle = "#d7ccc8";
-        ctx.fillRect(paddingX - 10, paddingY - 10, 10, canvas.height - paddingY * 2 + 20);
+        ctx.fillRect(paddingX - 8, paddingY - 10, 8, canvas.height - paddingY * 2 + 20);
 
+        // Trastes
         ctx.strokeStyle = "#9e9e9e";
-        ctx.lineWidth = 3;
-        for (let i = 1; i <= totalFrets; i++) {
-            const x = paddingX + i * fretWidth;
+        ctx.lineWidth = 2;
+        for (let i = 1; i <= 12; i++) {
+            let x = paddingX + i * fretWidth;
             ctx.beginPath(); ctx.moveTo(x, paddingY - 10); ctx.lineTo(x, canvas.height - paddingY + 10); ctx.stroke();
         }
 
-        ctx.fillStyle = "#ffffff";
-        [3, 5, 7, 9, 12].forEach(fret => {
-            const x = paddingX + (fret - 0.5) * fretWidth;
-            const y = canvas.height / 2;
-            if (fret === 12) {
-                ctx.beginPath(); ctx.arc(x, y - 15, 4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x, y + 15, 4, 0, Math.PI * 2); ctx.fill();
-            } else {
-                ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
-            }
-        });
-
-        for (let i = 0; i < totalStrings; i++) {
-            const y = paddingY + i * stringSpacing;
-            ctx.lineWidth = 1 + (i * 0.5);
+        // Cuerdas
+        for (let i = 0; i < numStrings; i++) {
+            let y = paddingY + i * stringSpacing;
             ctx.strokeStyle = "#e0e0e0";
-            ctx.beginPath(); ctx.moveTo(paddingX - 10, y); ctx.lineTo(canvas.width - paddingX + fretWidth, y); ctx.stroke();
+            ctx.lineWidth = 1 + (i * 0.4);
+            ctx.beginPath(); ctx.moveTo(paddingX, y); ctx.lineTo(canvas.width - paddingX, y); ctx.stroke();
 
-            ctx.fillStyle = "#4CAF50";
-            ctx.font = "14px Arial";
-            ctx.fillText(stringNames[i], 10, y + 5);
+            // Nota al aire a la izquierda
+            ctx.fillStyle = "var(--accent-color)";
+            ctx.font = "bold 12px Arial";
+            ctx.fillText(conf.names[(numStrings - 1) - i], 15, y + 4);
         }
 
-        ctx.fillStyle = "#aaa";
-        ctx.font = "12px Arial";
-        for (let i = 0; i <= totalFrets; i++) {
-            const x = paddingX + (i === 0 ? -15 : (i - 0.5) * fretWidth);
-            ctx.fillText(i.toString(), x, canvas.height - 2);
+        // Números de traste
+        ctx.fillStyle = "#888";
+        ctx.font = "10px Arial";
+        for (let i = 1; i <= 12; i++) {
+            ctx.fillText(i.toString(), paddingX + (i - 0.5) * fretWidth - 3, canvas.height - 2);
         }
     }
 
     canvas.addEventListener('mousedown', (e) => {
+        const inst = document.getElementById('input-select').value;
+        const conf = tunings[inst];
+        if(!conf) return;
+
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
         const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-        let fret = 0;
-        if (x > paddingX) fret = Math.ceil((x - paddingX) / fretWidth);
-        if (fret > totalFrets) return;
+        let paddingX = 40; let paddingY = 20;
+        let fretWidth = (canvas.width - paddingX * 2) / 12;
+        let stringSpacing = (canvas.height - paddingY * 2) / (conf.open.length - 1 || 1);
 
-        let stringGraphicIndex = Math.round((y - paddingY) / stringSpacing);
-        if (stringGraphicIndex < 0 || stringGraphicIndex > 5) return;
+        let traste = 0;
+        if (x > paddingX) traste = Math.ceil((x - paddingX) / fretWidth);
+        if (traste > 12) return;
 
-        const logicalStringIndex = 5 - stringGraphicIndex; 
-        const noteMidi = tunings.guitar[logicalStringIndex] + fret;
+        let idxGrafico = Math.round((y - paddingY) / stringSpacing);
+        if (idxGrafico < 0 || idxGrafico >= conf.open.length) return;
 
-        melodia.push({
-            cuerdaGrafica: stringGraphicIndex,
-            traste: fret,
-            midi: noteMidi,
-            nombreOriginal: getNoteName(noteMidi)
-        });
+        // Invertir índice gráfico a físico (aguda arriba)
+        let idxFisico = (conf.open.length - 1) - idxGrafico;
+        let midiCalculado = conf.open[idxFisico] + traste;
 
-        actualizarTablaturaEntrada();
-        actualizarTranscripcion();
+        agregarNota(midiCalculated);
     });
 
-    // ========== LÓGICA DE INTERFAZ ==========
+    // ========== EDICIÓN GLOBAL ==========
+    function borrarUltimaNota() { melodia.pop(); renderizarSecuenciaEnVivo(); actualizarSalida(); }
+    function limpiarTodo() { melodia = []; renderizarSecuenciaEnVivo(); actualizarSalida(); }
 
-    function actualizarTablaturaEntrada() {
-        const tabOutput = document.getElementById('tab-output');
-        let lineas = [`e|--`, `B|--`, `G|--`, `D|--`, `A|--`, `E|--`];
-
-        melodia.forEach(nota => {
-            const trasteStr = nota.traste.toString();
-            const longitudBloque = Math.max(trasteStr.length + 2, 4);
-
-            for (let i = 0; i < 6; i++) {
-                if (i === nota.cuerdaGrafica) {
-                    lineas[i] += `${trasteStr}`.padEnd(longitudBloque - 2, '-') + `--`;
-                } else {
-                    lineas[i] += '-'.repeat(longitudBloque);
-                }
-            }
-        });
-
-        tabOutput.textContent = lineas.join('\n');
-    }
-
-    function actualizarTranscripcion() {
-        const container = document.getElementById('transcription-output');
-        const instrumento = document.getElementById('instrument-select').value;
+    // ========== EXPORTADOR TXT INTELIGENTE CON ARTE ASCII ==========
+    function generarDibujoDiapasonASCII(instKey) {
+        const conf = tunings[instKey];
+        if(!conf) return "";
+        let totalTrastes = 12;
+        let block = `MAPA DE REFERENCIA DEL DIAPASÓN (${instKey.toUpperCase()})\n`;
+        block += `=======================================================\n`;
         
-        if (melodia.length === 0) {
-            container.innerHTML = '<span style="color: #888;">[ Añade notas en el diapasón para ver el esquema ]</span>';
-            // Remover la clase tab-block si estaba puesta
-            container.classList.remove('tab-block');
-            return;
-        }
-
-        let salidaEsquematica = "";
-        
-        // Determinar qué generador usar
-        if (['charango', 'ronroco', 'ukelele', 'bajo'].includes(instrumento)) {
-            salidaEsquematica = generarTablaturaEsquematica(instrumento);
-            container.classList.add('tab-block'); // Forzar renderizado exacto para tabs
-        } else {
-            container.classList.remove('tab-block'); // Permitir flex/wrap en secuencias
-            if (instrumento === 'armonica') {
-                salidaEsquematica = generarEsquemaArmonica();
-            } else if (instrumento === 'concertina') {
-                salidaEsquematica = generarEsquemaConcertina();
-            } else if (instrumento === 'quena') {
-                salidaEsquematica = generarEsquemaQuena();
+        // Dibujar de cuerda aguda a grave
+        for(let i = conf.open.length - 1; i >= 0; i--) {
+            let linea = ` ${conf.names[i]} |`;
+            for(let t = 1; t <= totalTrastes; t++) {
+                linea += `---|`;
             }
+            block += linea + "\n";
         }
-
-        container.textContent = salidaEsquematica;
+        let indices = "     ";
+        for(let t = 1; t <= totalTrastes; t++) indices += ` ${t.toString().padEnd(2)} `;
+        block += indices + "\n=======================================================\n";
+        return block;
     }
 
-    function borrarUltimaNota() {
-        if (melodia.length > 0) {
-            melodia.pop();
-            actualizarTablaturaEntrada();
-            actualizarTranscripcion();
+    function generarDibujoInstrumentoSimplificado(instKey) {
+        if(instKey === 'armonica') {
+            return `MAPA DE REFERENCIA: ARMÓNICA DIATÓNICA\n` +
+                   `╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗\n` +
+                   `║ 1 ║ 2 ║ 3 ║ 4 ║ 5 ║ 6 ║ 7 ║ 8 ║ 9 ║10 ║ <-- Celdas\n` +
+                   `╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝\n` +
+                   ` NOTA SOLA = Soplar  |  (NOTA) Entre paréntesis = Aspirar\n`;
         }
-    }
-
-    function limpiarTodo() {
-        melodia = [];
-        actualizarTablaturaEntrada();
-        actualizarTranscripcion();
+        if(instKey === 'quena') {
+            return `MAPA DE REFERENCIA: QUENA TRADICIONAL\n` +
+                   ` Ubicación de Agujeros: [ Agujero Posterior Pulgar | 1 2 3 4 5 6 Frontales ]\n` +
+                   ` Simbología:   ● = Tapado   ○ = Abierto   ◐ = Medio Agujero\n`;
+        }
+        if(instKey === 'concertina') {
+            return `MAPA DE REFERENCIA: CONCERTINA ANGLO 20\n` +
+                   ` Formato de salida: [NombreBotón Acción] \n` +
+                   ` Leyenda de Acción:  C = Cerrar fuelle (Empujar) | A = Abrir fuelle (Jalar)\n`;
+        }
+        return "";
     }
 
     function exportarTXT() {
-        if (melodia.length === 0) {
-            alert("No hay melodía para exportar.");
-            return;
+        if(melodia.length === 0) { alert("¡Inserta notas primero!"); return; }
+
+        const instIn = document.getElementById('input-select').value;
+        const instOut = document.getElementById('output-select').value;
+        
+        let txt = "=========================================================\n";
+        txt += "           TABTRANSCODE - REPORTE DE TRANSCRIPCIÓN\n";
+        txt += "=========================================================\n\n";
+        
+        txt += `Instrumento de Entrada Usado: ${instIn.toUpperCase()}\n`;
+        txt += `Instrumento de Salida Generado: ${instOut.toUpperCase()}\n\n`;
+
+        txt += "---------------------------------------------------------\n";
+        txt += "DIAGRAMA DEL INSTRUMENTO SELECCIONADO\n";
+        txt += "---------------------------------------------------------\n";
+        if(tunings[instOut]) {
+            txt += generarDibujoDiapasonASCII(instOut);
+        } else {
+            txt += generarDibujoInstrumentoSimplificado(instOut);
         }
-
-        const select = document.getElementById('instrument-select');
-        const instrumentoTxt = select.options[select.selectedIndex].text;
         
-        let contenido = "========================================\n";
-        contenido += " TABTRANSCODE - EXPORTACIÓN ESQUEMÁTICA\n";
-        contenido += "========================================\n\n";
+        txt += "\n---------------------------------------------------------\n";
+        txt += "TRANSCRIPCIÓN FINAL DE LA CANCIÓN\n";
+        txt += "---------------------------------------------------------\n";
+        txt += document.getElementById('transcription-output').textContent + "\n\n";
         
-        contenido += "MELODÍA ORIGINAL (Guitarra):\n";
-        contenido += "----------------------------------------\n";
-        contenido += document.getElementById('tab-output').textContent + "\n\n";
+        txt += "Generado automáticamente por TabTranscode 2026.\n";
 
-        contenido += `TRANSCRIPCIÓN: ${instrumentoTxt.toUpperCase()}\n`;
-        contenido += "----------------------------------------\n";
-        contenido += document.getElementById('transcription-output').textContent + "\n";
-
-        const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+        // Lanzar descarga
+        const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `TabTranscode_${instrumentoTxt.split(' ')[0]}.txt`;
+        a.download = `Transcripcion_${instIn}_a_${instOut}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -520,8 +659,7 @@ E|--</pre>
     }
 
     window.onload = () => {
-        dibujarDiapason();
-        actualizarTranscripcion();
+        inicializarCanvas();
     };
 </script>
 </body>
